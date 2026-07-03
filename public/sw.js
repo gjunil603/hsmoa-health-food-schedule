@@ -1,5 +1,5 @@
-const CACHE_NAME = 'hsmoa-health-food-v6';
-const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/favicon.png', '/icon-192.png', '/icon-512.png'];
+const CACHE_NAME = 'hsmoa-health-food-v7';
+const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/favicon.png', '/favicon.ico', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
