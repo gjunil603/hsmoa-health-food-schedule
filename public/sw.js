@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hsmoa-health-food-v8';
+const CACHE_NAME = 'hsmoa-health-food-v9';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/favicon.png', '/favicon.ico', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {
