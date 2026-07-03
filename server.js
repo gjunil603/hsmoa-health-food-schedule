@@ -7,6 +7,7 @@ const path = require('path');
 const { URL } = require('url');
 
 const PORT = process.env.PORT || 3000;
+const CACHE_TTL_MS = 30 * 60 * 1000;
 const AES_KEY = Buffer.from('0b659773-ee62-41f6-9162-5f4217488e2c').subarray(0, 16);
 const HSMOA_BASE = 'https://trend.hsmoa-ad.com';
 
@@ -276,6 +277,39 @@ function isLiveNow(start, end) {
   return now >= startMs && now <= endMs;
 }
 
+const scheduleCache = new Map();
+
+function getCachedSchedule(date) {
+  const entry = scheduleCache.get(date);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    scheduleCache.delete(date);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedSchedule(date, body) {
+  scheduleCache.set(date, {
+    cachedAt: Date.now(),
+    body,
+  });
+}
+
+async function buildScheduleResponse(date) {
+  const summaryTotal = await fetchProductCount(date);
+  const schedules = await fetchFullDaySchedule(date, summaryTotal);
+  return {
+    date,
+    category: CATEGORY,
+    channels: getChannelList(),
+    dateRange: getAllowedDateRange(),
+    updatedAt: new Date().toISOString(),
+    total: schedules.length,
+    schedules,
+  };
+}
+
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -335,16 +369,24 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const summaryTotal = await fetchProductCount(date);
-      const schedules = await fetchFullDaySchedule(date, summaryTotal);
+      const forceRefresh = url.searchParams.get('refresh') === '1';
+      const cached = !forceRefresh ? getCachedSchedule(date) : null;
+
+      if (cached) {
+        sendJson(res, 200, {
+          ...cached.body,
+          fromCache: true,
+          cachedAt: new Date(cached.cachedAt).toISOString(),
+        });
+        return;
+      }
+
+      const body = await buildScheduleResponse(date);
+      setCachedSchedule(date, body);
       sendJson(res, 200, {
-        date,
-        category: CATEGORY,
-        channels: getChannelList(),
-        dateRange: getAllowedDateRange(),
-        updatedAt: new Date().toISOString(),
-        total: schedules.length,
-        schedules,
+        ...body,
+        fromCache: false,
+        cachedAt: new Date().toISOString(),
       });
     } catch (err) {
       console.error(err);

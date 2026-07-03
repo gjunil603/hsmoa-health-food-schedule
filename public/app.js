@@ -28,6 +28,7 @@ let allSchedules = [];
 let allChannels = [];
 let lastUpdatedAt = null;
 let lastDate = '';
+let lastFromCache = false;
 let isLiveFilterOn = false;
 let dateRange = { min: '', max: '' };
 let calendarView = { year: 0, month: 0 };
@@ -258,6 +259,10 @@ function updateStatusText() {
     parts.push(`${formatTime(lastUpdatedAt)} 갱신`);
   }
 
+  if (lastFromCache) {
+    parts.push('캐시');
+  }
+
   statusText.textContent = parts.join(' · ');
 }
 
@@ -335,7 +340,7 @@ function resetFilters() {
   channelSelect.value = '';
 }
 
-async function loadSchedule() {
+async function loadSchedule(forceRefresh = false) {
   const requestedDate = dateInput.value;
   const requestId = ++loadRequestId;
 
@@ -348,7 +353,11 @@ async function loadSchedule() {
   scheduleList.innerHTML = '';
 
   try {
-    const response = await fetch(`/api/schedule?date=${requestedDate}`, {
+    const params = new URLSearchParams({ date: requestedDate });
+    if (forceRefresh) {
+      params.set('refresh', '1');
+    }
+    const response = await fetch(`/api/schedule?${params}`, {
       signal: loadAbortController.signal,
     });
     const data = await response.json();
@@ -370,6 +379,7 @@ async function loadSchedule() {
     allChannels = data.channels || [];
     lastUpdatedAt = new Date(data.updatedAt);
     lastDate = data.date;
+    lastFromCache = Boolean(data.fromCache);
 
     if (shouldResetFilters) {
       resetFilters();
@@ -390,6 +400,7 @@ async function loadSchedule() {
     allChannels = [];
     lastDate = '';
     lastUpdatedAt = null;
+    lastFromCache = false;
     resetFilters();
     totalCount.textContent = '0';
     totalCount.classList.add('hidden');
@@ -405,7 +416,7 @@ function startAutoRefresh() {
   refreshTimer = setInterval(loadSchedule, REFRESH_MS);
 }
 
-document.getElementById('refreshBtn').addEventListener('click', loadSchedule);
+document.getElementById('refreshBtn').addEventListener('click', () => loadSchedule(true));
 document.getElementById('prevDay').addEventListener('click', () => shiftDate(-1));
 document.getElementById('nextDay').addEventListener('click', () => shiftDate(1));
 document.getElementById('todayBtn').addEventListener('click', () => {
