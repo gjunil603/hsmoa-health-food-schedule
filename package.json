@@ -1,0 +1,13 @@
+{
+  "name": "hsmoa-health-food-schedule",
+  "version": "1.0.0",
+  "description": "홈쇼핑 건강식품 편성표 실시간 대시보드",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

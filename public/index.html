@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <title>건강식품 홈쇼핑 편성표</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-main">
+      <p class="eyebrow">식품 · 건강식품</p>
+      <div class="title-row">
+        <h1>편성표</h1>
+        <span id="totalCount" class="count-badge hidden">0</span>
+      </div>
+    </div>
+    <button id="refreshBtn" class="icon-btn" type="button" aria-label="새로고침">↻</button>
+  </header>
+
+  <section class="toolbar">
+    <button id="prevDay" type="button" class="icon-btn" aria-label="이전 날">‹</button>
+    <div class="date-field">
+      <div class="date-picker">
+        <button id="datePickerToggle" type="button" class="date-picker-toggle" aria-haspopup="dialog" aria-expanded="false">
+          <span id="datePickerDisplay"></span>
+          <span class="date-picker-icon" aria-hidden="true">▾</span>
+        </button>
+        <div id="datePickerPanel" class="date-picker-panel hidden" role="dialog" aria-label="날짜 선택">
+          <div class="date-picker-header">
+            <button id="calPrevMonth" type="button" class="cal-nav-btn" aria-label="이전 달">‹</button>
+            <span id="calMonthLabel" class="cal-month-label"></span>
+            <button id="calNextMonth" type="button" class="cal-nav-btn" aria-label="다음 달">›</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div id="calGrid" class="cal-grid"></div>
+          <div class="date-picker-footer">
+            <button id="calToday" type="button" class="cal-footer-btn">오늘</button>
+          </div>
+        </div>
+        <input id="dateInput" type="hidden" />
+      </div>
+    </div>
+    <button id="nextDay" type="button" class="icon-btn" aria-label="다음 날">›</button>
+    <button id="todayBtn" type="button" class="text-btn">오늘</button>
+  </section>
+
+  <section id="filters" class="filters hidden">
+    <select id="channelSelect" class="select-input" aria-label="홈쇼핑사 선택">
+      <option value="">전체 채널</option>
+    </select>
+    <button id="liveOnly" type="button" class="pill-btn" aria-pressed="false">LIVE</button>
+  </section>
+
+  <p id="statusText" class="status">불러오는 중...</p>
+
+  <main id="scheduleList" class="schedule-list"></main>
+
+  <template id="cardTemplate">
+    <a class="item" target="_blank" rel="noopener noreferrer">
+      <img class="item-thumb" alt="" loading="lazy" />
+      <div class="item-content">
+        <div class="item-meta">
+          <span class="item-time"></span>
+          <span class="item-channel"></span>
+        </div>
+        <p class="item-title"></p>
+        <p class="item-price"></p>
+      </div>
+    </a>
+  </template>
+
+  <script src="/app.js?v=4"></script>
+</body>
+</html>
