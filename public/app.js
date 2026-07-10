@@ -15,6 +15,7 @@ const exportBar = document.getElementById('exportBar');
 const liveOnly = document.getElementById('liveOnly');
 const channelSelect = document.getElementById('channelSelect');
 const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+const scrollTopBtn = document.getElementById('scrollTopBtn');
 const cardTemplate = document.getElementById('cardTemplate');
 
 if (!dateInput || !datePickerToggle || !datePickerPanel || !datePickerDisplay) {
@@ -24,8 +25,6 @@ if (!dateInput || !datePickerToggle || !datePickerPanel || !datePickerDisplay) {
   throw new Error('Required date picker elements are missing from the page.');
 }
 
-const REFRESH_MS = 4 * 60 * 60 * 1000;
-let refreshTimer;
 let allSchedules = [];
 let allChannels = [];
 let lastUpdatedAt = null;
@@ -530,7 +529,19 @@ if (downloadExcelBtn) {
   downloadExcelBtn.addEventListener('click', downloadExcel);
 }
 
+function updateScrollTopButton() {
+  if (!scrollTopBtn) return;
+  scrollTopBtn.classList.toggle('hidden', window.scrollY < 400);
+}
+
+if (scrollTopBtn) {
+  scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', updateScrollTopButton, { passive: true });
+  updateScrollTopButton();
+}
+
 setupDateInputLimits();
 setSelectedDate(dateInput.value || getKstDateString(), false);
 loadSchedule();
-startAutoRefresh();

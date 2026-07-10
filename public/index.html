@@ -69,6 +69,8 @@
 
   <main id="scheduleList" class="schedule-list"></main>
 
+  <button id="scrollTopBtn" type="button" class="scroll-top-btn hidden" aria-label="맨 위로">↑</button>
+
   <template id="cardTemplate">
     <a class="item" target="_blank" rel="noopener noreferrer">
       <img class="item-thumb" alt="" loading="lazy" />
@@ -83,7 +85,7 @@
     </a>
   </template>
 
-  <script src="/app.js?v=10"></script>
+  <script src="/app.js?v=11"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
