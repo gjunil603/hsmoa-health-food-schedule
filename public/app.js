@@ -488,11 +488,6 @@ async function loadSchedule(forceRefresh = false) {
   }
 }
 
-function startAutoRefresh() {
-  clearInterval(refreshTimer);
-  refreshTimer = setInterval(loadSchedule, REFRESH_MS);
-}
-
 document.getElementById('refreshBtn').addEventListener('click', () => loadSchedule(true));
 document.getElementById('prevDay').addEventListener('click', () => shiftDate(-1));
 document.getElementById('nextDay').addEventListener('click', () => shiftDate(1));
