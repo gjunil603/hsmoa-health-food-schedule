@@ -63,6 +63,7 @@
 
   <section id="exportBar" class="export-bar hidden">
     <button id="downloadExcelBtn" type="button" class="text-btn download-btn">엑셀 다운로드</button>
+    <button id="syncSheetsBtn" type="button" class="text-btn sync-btn">시트 동기화</button>
   </section>
 
   <p id="statusText" class="status">불러오는 중...</p>
@@ -83,7 +84,7 @@
     </a>
   </template>
 
-  <script src="/app.js?v=8"></script>
+  <script src="/app.js?v=9"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');

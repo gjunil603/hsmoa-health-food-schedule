@@ -5,9 +5,17 @@ const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
+const {
+  isSheetsConfigured,
+  replaceDateSchedules,
+  getSchedulesForDate,
+  getSheetStatus,
+} = require('./sheets');
 
 const PORT = process.env.PORT || 3000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const SYNC_DELAY_MS = Number(process.env.SYNC_DELAY_MS || 45000);
+const SYNC_SECRET = process.env.SYNC_SECRET || '';
 const AES_KEY = Buffer.from('0b659773-ee62-41f6-9162-5f4217488e2c').subarray(0, 16);
 const HSMOA_BASE = 'https://trend.hsmoa-ad.com';
 
@@ -310,6 +318,85 @@ async function buildScheduleResponse(date) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function listDatesFromToday(daysAhead = 7) {
+  const today = getKstDateString();
+  const dates = [];
+  for (let i = 0; i <= daysAhead; i += 1) {
+    dates.push(shiftKstDate(today, { days: i }));
+  }
+  return dates;
+}
+
+let syncState = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  currentDate: null,
+  results: [],
+  error: null,
+};
+
+async function runSlowSheetSync({ daysAhead = 7, onlyToday = false } = {}) {
+  if (!isSheetsConfigured()) {
+    throw new Error('구글 시트 환경 변수가 설정되지 않았습니다.');
+  }
+  if (syncState.running) {
+    throw new Error('이미 시트 동기화가 진행 중입니다.');
+  }
+
+  const dates = onlyToday ? [getKstDateString()] : listDatesFromToday(daysAhead);
+  syncState = {
+    running: true,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    currentDate: null,
+    results: [],
+    error: null,
+  };
+
+  (async () => {
+    try {
+      for (let i = 0; i < dates.length; i += 1) {
+        const date = dates[i];
+        syncState.currentDate = date;
+        const body = await buildScheduleResponse(date);
+        const saved = await replaceDateSchedules(date, body.schedules);
+        setCachedSchedule(date, {
+          ...body,
+          source: 'sheet',
+          sheetSyncedAt: saved.syncedAt,
+        });
+        syncState.results.push({
+          date,
+          count: saved.count,
+          syncedAt: saved.syncedAt,
+        });
+
+        if (i < dates.length - 1) {
+          await sleep(SYNC_DELAY_MS);
+        }
+      }
+    } catch (err) {
+      console.error('sheet sync failed', err);
+      syncState.error = err.message;
+    } finally {
+      syncState.running = false;
+      syncState.currentDate = null;
+      syncState.finishedAt = new Date().toISOString();
+    }
+  })();
+
+  return {
+    started: true,
+    dates,
+    delayMs: SYNC_DELAY_MS,
+  };
+}
+
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -373,8 +460,37 @@ const server = http.createServer(async (req, res) => {
       }
 
       const forceRefresh = url.searchParams.get('refresh') === '1';
-      const cached = !forceRefresh ? getCachedSchedule(date) : null;
+      const preferLive = url.searchParams.get('source') === 'live' || forceRefresh;
 
+      if (!preferLive && isSheetsConfigured()) {
+        try {
+          const sheetData = await getSchedulesForDate(date);
+          if (sheetData && !sheetData.empty) {
+            const body = {
+              date,
+              category: CATEGORY,
+              channels: getChannelList(),
+              dateRange: getAllowedDateRange(),
+              updatedAt: sheetData.syncedAt || new Date().toISOString(),
+              total: sheetData.schedules.length,
+              schedules: sheetData.schedules,
+              source: 'sheet',
+              sheetSyncedAt: sheetData.syncedAt,
+            };
+            setCachedSchedule(date, body);
+            sendJson(res, 200, {
+              ...body,
+              fromCache: false,
+              cachedAt: new Date().toISOString(),
+            });
+            return;
+          }
+        } catch (sheetErr) {
+          console.error('sheet read failed, falling back to live API', sheetErr);
+        }
+      }
+
+      const cached = !forceRefresh ? getCachedSchedule(date) : null;
       if (cached) {
         sendJson(res, 200, {
           ...cached.body,
@@ -385,9 +501,24 @@ const server = http.createServer(async (req, res) => {
       }
 
       const body = await buildScheduleResponse(date);
-      setCachedSchedule(date, body);
-      sendJson(res, 200, {
+      const responseBody = {
         ...body,
+        source: 'live',
+      };
+
+      if (isSheetsConfigured()) {
+        try {
+          const saved = await replaceDateSchedules(date, body.schedules);
+          responseBody.sheetSyncedAt = saved.syncedAt;
+          responseBody.source = 'live+sheet';
+        } catch (sheetErr) {
+          console.error('sheet write failed', sheetErr);
+        }
+      }
+
+      setCachedSchedule(date, responseBody);
+      sendJson(res, 200, {
+        ...responseBody,
         fromCache: false,
         cachedAt: new Date().toISOString(),
       });
@@ -398,8 +529,54 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/sheets/status') {
+    try {
+      const status = await getSheetStatus();
+      sendJson(res, 200, {
+        ...status,
+        sync: syncState,
+        delayMs: SYNC_DELAY_MS,
+      });
+    } catch (err) {
+      sendJson(res, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/sheets/sync') {
+    try {
+      if (SYNC_SECRET) {
+        const provided = url.searchParams.get('secret') || req.headers['x-sync-secret'];
+        if (provided !== SYNC_SECRET) {
+          sendJson(res, 401, { error: '동기화 권한이 없습니다.' });
+          return;
+        }
+      }
+
+      const onlyToday = url.searchParams.get('today') === '1';
+      const daysAhead = Number(url.searchParams.get('days') || 7);
+      const result = await runSlowSheetSync({
+        daysAhead: Number.isFinite(daysAhead) ? Math.min(Math.max(daysAhead, 0), 7) : 7,
+        onlyToday,
+      });
+      sendJson(res, 202, {
+        message: onlyToday
+          ? '오늘 편성표 시트 동기화를 시작했습니다.'
+          : `오늘부터 ${result.dates.length - 1}일 후까지 시트 동기화를 시작했습니다.`,
+        ...result,
+      });
+    } catch (err) {
+      sendJson(res, 409, { error: err.message });
+    }
+    return;
+  }
+
   if (url.pathname === '/api/health') {
-    sendJson(res, 200, { ok: true });
+    sendJson(res, 200, {
+      ok: true,
+      sheetsConfigured: isSheetsConfigured(),
+      syncRunning: syncState.running,
+    });
     return;
   }
 
@@ -408,4 +585,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Google Sheets: ${isSheetsConfigured() ? 'configured' : 'not configured'}`);
 });
