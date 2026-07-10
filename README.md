@@ -12,7 +12,8 @@
 - 채널 필터, LIVE 필터
 - 편성표 엑셀(CSV) 다운로드 (화면에 보이는 목록 기준)
 - **구글 시트 연동** (시트에 있으면 시트에서 표시, 없으면 API 조회 후 시트 저장)
-- **시트 동기화** (오늘만 / 오늘~7일, 날짜마다 약 45초 간격으로 천천히 요청)
+- ↻ 새로고침 시 API 최신 조회 후 해당 날짜 시트 갱신
+- (예정) 새벽 자동으로 오늘~7일 시트 동기화
 - 상품 썸네일·가격·홈쇼핑 상품 링크
 - 서버 캐시 30분 (같은 날짜 재조회 시 빠름, ↻ 버튼은 최신 데이터)
 - 4시간마다 자동 새로고침
@@ -48,26 +49,50 @@ node server.js
 3. **시트 동기화** 버튼: 오늘만 또는 오늘~7일을 천천히 API → 시트 저장
 4. ↻ 새로고침: API로 최신 조회 후 시트 갱신
 
-### 매일 자동 동기화 (Render 무료)
+### 매일 자동 동기화 (새벽, Render 무료)
 
-서버가 잠들면 자동 실행이 멈춥니다. 외부 크론으로 하루 1회 깨우면 됩니다.
+Render 무료는 가만히 있으면 잠듭니다. **외부 크론**이 새벽에 URL을 한 번 호출하면 서버가 깨어나 오늘~7일 시트를 천천히 채웁니다.
 
-예: [cron-job.org](https://cron-job.org) 에서 매일 1회 호출
+#### 1) (권장) 비밀값 추가
+
+Render → Environment에 추가:
+
+| Key | Value |
+|-----|--------|
+| `SYNC_SECRET` | 아무 긴 비밀번호 (예: `my-secret-2026`) |
+
+#### 2) cron-job.org 설정
+
+1. [cron-job.org](https://cron-job.org) 가입 (무료)
+2. **Create cronjob**
+3. 설정 예:
+
+| 항목 | 값 |
+|------|-----|
+| Title | `hsmoa sheet sync` |
+| URL | `https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?days=7&secret=여기에_SYNC_SECRET` |
+| Schedule | Every day |
+| 시각 | **19:00 UTC** = 한국시간 **새벽 4:00** |
+| Request method | GET |
+
+`SYNC_SECRET`을 안 넣었다면 URL에서 `&secret=...` 부분을 빼면 됩니다.
+
+#### 3) 소요 시간
+
+- 날짜마다 약 45초 대기 + API 조회
+- 오늘~7일(8일)이면 **대략 15~30분** 걸릴 수 있음
+- 첫 호출은 서버 깨우는 시간(30초~1분)이 더 붙을 수 있음
+
+#### 4) 확인
+
+- 다음날 아침 구글 시트 `schedules`에 여러 날짜가 있는지 확인
+- cron-job.org 실행 기록이 성공(2xx)인지 확인
+- 앱에서 날짜를 바꿔 볼 때 상태 줄에 **시트**가 보이면 OK
+
+오늘만 매일 갱신하려면:
 
 ```
-https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?today=1
-```
-
-`SYNC_SECRET`을 넣었다면:
-
-```
-https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?today=1&secret=비밀값
-```
-
-오늘~7일 전체:
-
-```
-https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?days=7
+https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?today=1&secret=여기에_SYNC_SECRET
 ```
 
 ## 배포 (Render)

@@ -239,9 +239,6 @@ h1 {
 }
 
 .export-bar {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
   padding: 0 16px 8px;
 }
 
@@ -249,15 +246,9 @@ h1 {
   display: none;
 }
 
-.download-btn,
-.sync-btn {
+.download-btn {
   width: 100%;
   white-space: nowrap;
-}
-
-.sync-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .filters.hidden {

@@ -15,7 +15,6 @@ const exportBar = document.getElementById('exportBar');
 const liveOnly = document.getElementById('liveOnly');
 const channelSelect = document.getElementById('channelSelect');
 const downloadExcelBtn = document.getElementById('downloadExcelBtn');
-const syncSheetsBtn = document.getElementById('syncSheetsBtn');
 const cardTemplate = document.getElementById('cardTemplate');
 
 if (!dateInput || !datePickerToggle || !datePickerPanel || !datePickerDisplay) {
@@ -490,64 +489,6 @@ async function loadSchedule(forceRefresh = false) {
   }
 }
 
-async function syncSheets({ onlyToday = false } = {}) {
-  if (!syncSheetsBtn) return;
-
-  syncSheetsBtn.disabled = true;
-  const previous = statusText.textContent;
-  statusText.textContent = onlyToday
-    ? '오늘 시트 동기화 시작 중...'
-    : '오늘~7일 시트 동기화 시작 중... (날짜마다 약 45초 간격)';
-
-  try {
-    const params = new URLSearchParams();
-    if (onlyToday) params.set('today', '1');
-    const response = await fetch(`/api/sheets/sync?${params}`);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || '동기화 시작 실패');
-    }
-
-    statusText.textContent = `${data.message} · 진행 상황은 시트/상태줄에서 확인`;
-    pollSyncStatus();
-  } catch (err) {
-    statusText.textContent = previous || '동기화 실패';
-    alert(err.message);
-    syncSheetsBtn.disabled = false;
-  }
-}
-
-async function pollSyncStatus() {
-  try {
-    const response = await fetch('/api/sheets/status');
-    const data = await response.json();
-    if (data.sync?.running) {
-      statusText.textContent = `시트 동기화 중 · ${data.sync.currentDate || ''}`;
-      setTimeout(pollSyncStatus, 5000);
-      return;
-    }
-
-    if (syncSheetsBtn) syncSheetsBtn.disabled = false;
-
-    if (data.sync?.error) {
-      statusText.textContent = `시트 동기화 실패 · ${data.sync.error}`;
-      return;
-    }
-
-    if (data.sync?.results?.length) {
-      const last = data.sync.results[data.sync.results.length - 1];
-      statusText.textContent = `시트 동기화 완료 · ${data.sync.results.length}일 · 마지막 ${last.date} (${last.count}건)`;
-      loadSchedule(true);
-      return;
-    }
-
-    statusText.textContent = '시트 동기화 상태 확인 완료';
-  } catch (err) {
-    if (syncSheetsBtn) syncSheetsBtn.disabled = false;
-    statusText.textContent = '시트 상태 확인 실패';
-  }
-}
-
 function startAutoRefresh() {
   clearInterval(refreshTimer);
   refreshTimer = setInterval(loadSchedule, REFRESH_MS);
@@ -587,12 +528,6 @@ liveOnly.addEventListener('click', () => {
 });
 if (downloadExcelBtn) {
   downloadExcelBtn.addEventListener('click', downloadExcel);
-}
-if (syncSheetsBtn) {
-  syncSheetsBtn.addEventListener('click', () => {
-    const onlyToday = window.confirm('확인: 오늘만 동기화\n취소: 오늘부터 7일 후까지 천천히 동기화');
-    syncSheets({ onlyToday });
-  });
 }
 
 setupDateInputLimits();
