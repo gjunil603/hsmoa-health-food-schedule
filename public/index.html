@@ -71,6 +71,16 @@
 
   <button id="scrollTopBtn" type="button" class="scroll-top-btn hidden" aria-label="맨 위로">↑</button>
 
+  <div id="downloadModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="엑셀 다운로드">
+    <div class="modal-sheet">
+      <p class="modal-title">엑셀 다운로드</p>
+      <p class="modal-desc">받을 범위를 선택하세요.</p>
+      <button id="downloadTodayBtn" type="button" class="text-btn modal-action">당일만</button>
+      <button id="downloadRangeBtn" type="button" class="text-btn modal-action">오늘부터 7일</button>
+      <button id="downloadCancelBtn" type="button" class="modal-cancel">닫기</button>
+    </div>
+  </div>
+
   <template id="cardTemplate">
     <a class="item" target="_blank" rel="noopener noreferrer">
       <img class="item-thumb" alt="" loading="lazy" />
@@ -85,7 +95,7 @@
     </a>
   </template>
 
-  <script src="/app.js?v=12"></script>
+  <script src="/app.js?v=13"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');

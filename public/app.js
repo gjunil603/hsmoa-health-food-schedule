@@ -15,6 +15,10 @@ const exportBar = document.getElementById('exportBar');
 const liveOnly = document.getElementById('liveOnly');
 const channelSelect = document.getElementById('channelSelect');
 const downloadExcelBtn = document.getElementById('downloadExcelBtn');
+const downloadModal = document.getElementById('downloadModal');
+const downloadTodayBtn = document.getElementById('downloadTodayBtn');
+const downloadRangeBtn = document.getElementById('downloadRangeBtn');
+const downloadCancelBtn = document.getElementById('downloadCancelBtn');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 const cardTemplate = document.getElementById('cardTemplate');
 
@@ -456,13 +460,18 @@ async function downloadExcelRange() {
   }
 }
 
+function openDownloadModal() {
+  if (!downloadModal) return;
+  downloadModal.classList.remove('hidden');
+}
+
+function closeDownloadModal() {
+  if (!downloadModal) return;
+  downloadModal.classList.add('hidden');
+}
+
 function downloadExcel() {
-  const onlyToday = window.confirm('확인: 당일만\n취소: 오늘부터 7일 (구글 시트)');
-  if (onlyToday) {
-    downloadExcelToday();
-    return;
-  }
-  downloadExcelRange();
+  openDownloadModal();
 }
 
 async function loadSchedule(forceRefresh = false) {
@@ -575,6 +584,33 @@ liveOnly.addEventListener('click', () => {
 if (downloadExcelBtn) {
   downloadExcelBtn.addEventListener('click', downloadExcel);
 }
+if (downloadTodayBtn) {
+  downloadTodayBtn.addEventListener('click', () => {
+    closeDownloadModal();
+    downloadExcelToday();
+  });
+}
+if (downloadRangeBtn) {
+  downloadRangeBtn.addEventListener('click', () => {
+    closeDownloadModal();
+    downloadExcelRange();
+  });
+}
+if (downloadCancelBtn) {
+  downloadCancelBtn.addEventListener('click', closeDownloadModal);
+}
+if (downloadModal) {
+  downloadModal.addEventListener('click', (event) => {
+    if (event.target === downloadModal) {
+      closeDownloadModal();
+    }
+  });
+}
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeDownloadModal();
+  }
+});
 
 function updateScrollTopButton() {
   if (!scrollTopBtn) return;
