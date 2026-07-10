@@ -233,9 +233,13 @@ h1 {
 
 .filters {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
   padding: 0 16px 8px;
+}
+
+.download-btn {
+  white-space: nowrap;
 }
 
 .filters.hidden {

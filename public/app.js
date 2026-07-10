@@ -13,6 +13,7 @@ const totalCount = document.getElementById('totalCount');
 const filters = document.getElementById('filters');
 const liveOnly = document.getElementById('liveOnly');
 const channelSelect = document.getElementById('channelSelect');
+const downloadExcelBtn = document.getElementById('downloadExcelBtn');
 const cardTemplate = document.getElementById('cardTemplate');
 
 if (!dateInput || !datePickerToggle || !datePickerPanel || !datePickerDisplay) {
@@ -340,6 +341,69 @@ function resetFilters() {
   channelSelect.value = '';
 }
 
+function escapeCsvCell(value) {
+  const text = value == null ? '' : String(value);
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function formatDateTimeForExcel(iso) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function downloadExcel() {
+  const rows = applyFilters(allSchedules);
+  if (!rows.length) {
+    statusText.textContent = '다운로드할 편성표가 없습니다.';
+    return;
+  }
+
+  const headers = ['날짜', '시작', '종료', '채널', '상품명', '가격', 'LIVE', '상품URL', '카테고리'];
+  const lines = [headers.map(escapeCsvCell).join(',')];
+
+  for (const item of rows) {
+    lines.push([
+      dateInput.value,
+      formatDateTimeForExcel(item.start),
+      formatDateTimeForExcel(item.end),
+      item.channelLabel || item.channel || '',
+      item.name || '',
+      item.price || '',
+      item.isLive ? 'Y' : 'N',
+      item.url || '',
+      item.category3 || '',
+    ].map(escapeCsvCell).join(','));
+  }
+
+  const csv = `\uFEFF${lines.join('\r\n')}`;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const channelPart = channelSelect.value
+    ? `_${channelSelect.options[channelSelect.selectedIndex].textContent.replace(/\s*\(\d+\)\s*$/, '')}`
+    : '';
+  const livePart = isLiveFilterOn ? '_LIVE' : '';
+  link.href = url;
+  link.download = `건강식품_편성표_${dateInput.value}${channelPart}${livePart}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function loadSchedule(forceRefresh = false) {
   const requestedDate = dateInput.value;
   const requestId = ++loadRequestId;
@@ -448,6 +512,7 @@ liveOnly.addEventListener('click', () => {
   liveOnly.setAttribute('aria-pressed', String(isLiveFilterOn));
   renderSchedules();
 });
+downloadExcelBtn.addEventListener('click', downloadExcel);
 
 setupDateInputLimits();
 setSelectedDate(dateInput.value || getKstDateString(), false);
