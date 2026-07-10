@@ -205,6 +205,39 @@ async function getSchedulesForDate(date) {
   };
 }
 
+async function getSchedulesInRange(startDate, endDate) {
+  if (!isSheetsConfigured()) {
+    throw new Error('구글 시트 환경 변수가 설정되지 않았습니다.');
+  }
+
+  const sheets = await getSheetsClient();
+  const rows = await readAllRows(sheets);
+  const matched = rows.filter((row) => {
+    const date = row[0];
+    return date && date >= startDate && date <= endDate;
+  });
+
+  const schedules = matched
+    .map((row) => ({
+      date: row[0],
+      ...rowToSchedule(row),
+    }))
+    .sort((a, b) => {
+      if (a.date !== b.date) return String(a.date).localeCompare(String(b.date));
+      return new Date(a.start) - new Date(b.start);
+    });
+
+  const dates = [...new Set(schedules.map((item) => item.date))];
+
+  return {
+    startDate,
+    endDate,
+    dates,
+    total: schedules.length,
+    schedules,
+  };
+}
+
 async function getSheetStatus() {
   if (!isSheetsConfigured()) {
     return { configured: false };
@@ -232,6 +265,7 @@ module.exports = {
   isSheetsConfigured,
   replaceDateSchedules,
   getSchedulesForDate,
+  getSchedulesInRange,
   getSheetStatus,
   SHEET_TAB,
 };

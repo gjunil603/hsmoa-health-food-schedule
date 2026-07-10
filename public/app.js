@@ -373,19 +373,13 @@ function formatDateTimeForExcel(iso) {
   }).format(date);
 }
 
-function downloadExcel() {
-  const rows = applyFilters(allSchedules);
-  if (!rows.length) {
-    statusText.textContent = '다운로드할 편성표가 없습니다.';
-    return;
-  }
-
+function buildCsv(rows) {
   const headers = ['날짜', '시작', '종료', '채널', '상품명', '가격', 'LIVE', '상품URL', '카테고리'];
   const lines = [headers.map(escapeCsvCell).join(',')];
 
   for (const item of rows) {
     lines.push([
-      dateInput.value,
+      item.date || dateInput.value,
       formatDateTimeForExcel(item.start),
       formatDateTimeForExcel(item.end),
       item.channelLabel || item.channel || '',
@@ -397,20 +391,78 @@ function downloadExcel() {
     ].map(escapeCsvCell).join(','));
   }
 
-  const csv = `\uFEFF${lines.join('\r\n')}`;
+  return `\uFEFF${lines.join('\r\n')}`;
+}
+
+function saveCsvFile(csv, filename) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  const channelPart = channelSelect.value
-    ? `_${channelSelect.options[channelSelect.selectedIndex].textContent.replace(/\s*\(\d+\)\s*$/, '')}`
-    : '';
-  const livePart = isLiveFilterOn ? '_LIVE' : '';
   link.href = url;
-  link.download = `건강식품_편성표_${dateInput.value}${channelPart}${livePart}.csv`;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function getDownloadFilename(label) {
+  const channelPart = channelSelect.value
+    ? `_${channelSelect.options[channelSelect.selectedIndex].textContent.replace(/\s*\(\d+\)\s*$/, '')}`
+    : '';
+  const livePart = isLiveFilterOn ? '_LIVE' : '';
+  return `건강식품_편성표_${label}${channelPart}${livePart}.csv`;
+}
+
+function downloadExcelToday() {
+  const rows = applyFilters(allSchedules).map((item) => ({
+    ...item,
+    date: dateInput.value,
+  }));
+  if (!rows.length) {
+    statusText.textContent = '다운로드할 편성표가 없습니다.';
+    return;
+  }
+
+  saveCsvFile(buildCsv(rows), getDownloadFilename(dateInput.value));
+}
+
+async function downloadExcelRange() {
+  const previous = statusText.textContent;
+  statusText.textContent = '시트에서 오늘~7일 데이터 불러오는 중...';
+  if (downloadExcelBtn) downloadExcelBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/sheets/export?days=7');
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || '시트 내보내기 실패');
+    }
+
+    const rows = applyFilters(data.schedules || []);
+    if (!rows.length) {
+      statusText.textContent = '시트에 다운로드할 편성표가 없습니다. 새벽 동기화 후 다시 시도하세요.';
+      return;
+    }
+
+    const label = `${data.startDate}_${data.endDate}`;
+    saveCsvFile(buildCsv(rows), getDownloadFilename(label));
+    statusText.textContent = `엑셀 저장 완료 · ${data.startDate}~${data.endDate} · ${rows.length}건`;
+  } catch (err) {
+    statusText.textContent = previous || '엑셀 다운로드 실패';
+    alert(err.message);
+  } finally {
+    if (downloadExcelBtn) downloadExcelBtn.disabled = false;
+  }
+}
+
+function downloadExcel() {
+  const onlyToday = window.confirm('확인: 당일만\n취소: 오늘부터 7일 (구글 시트)');
+  if (onlyToday) {
+    downloadExcelToday();
+    return;
+  }
+  downloadExcelRange();
 }
 
 async function loadSchedule(forceRefresh = false) {

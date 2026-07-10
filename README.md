@@ -10,7 +10,7 @@
 - 홈쇼핑사: 전 채널 (18개)
 - 한글 달력으로 날짜 선택 (오늘 기준 3개월 전 ~ 7일 후)
 - 채널 필터, LIVE 필터
-- 편성표 엑셀(CSV) 다운로드 (화면에 보이는 목록 기준)
+- 편성표 엑셀(CSV) 다운로드 (당일 / 오늘~7일 선택, 7일은 구글 시트)
 - **구글 시트 연동** (시트에 있으면 시트에서 표시, 없으면 API 조회 후 시트 저장)
 - ↻ 새로고침 시 API 최신 조회 후 해당 날짜 시트 갱신
 - (예정) 새벽 자동으로 오늘~7일 시트 동기화
@@ -131,7 +131,7 @@ git push
 |------------|------|
 | `GET /api/schedule?date=YYYY-MM-DD` | 편성표 (시트 우선, 없으면 API) |
 | `GET /api/schedule?date=...&refresh=1` | API 최신 조회 후 시트 갱신 |
-| `GET /api/sheets/status` | 시트·동기화 상태 |
+| `GET /api/sheets/export?days=7` | 시트에서 오늘~N일 편성표 JSON |
 | `GET /api/sheets/sync?today=1` | 오늘만 천천히 동기화 시작 |
 | `GET /api/sheets/sync?days=7` | 오늘~N일 동기화 시작 |
 | `GET /api/health` | 서버 상태 확인 |

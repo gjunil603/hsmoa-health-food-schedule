@@ -9,6 +9,7 @@ const {
   isSheetsConfigured,
   replaceDateSchedules,
   getSchedulesForDate,
+  getSchedulesInRange,
   getSheetStatus,
 } = require('./sheets');
 
@@ -590,6 +591,36 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (err) {
       sendJson(res, 500, { error: err.message });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/sheets/export') {
+    try {
+      if (!isSheetsConfigured()) {
+        sendJson(res, 400, { error: '구글 시트가 설정되지 않았습니다.' });
+        return;
+      }
+
+      const today = getKstDateString();
+      const daysAhead = Number(url.searchParams.get('days') || 7);
+      const safeDays = Number.isFinite(daysAhead) ? Math.min(Math.max(daysAhead, 0), 7) : 7;
+      const startDate = url.searchParams.get('from') || today;
+      const endDate = url.searchParams.get('to') || shiftKstDate(today, { days: safeDays });
+
+      if (!isDateInRange(startDate) || !isDateInRange(endDate)) {
+        const { min, max } = getAllowedDateRange();
+        sendJson(res, 400, {
+          error: `조회 가능 기간은 ${min} ~ ${max} 입니다.`,
+        });
+        return;
+      }
+
+      const data = await getSchedulesInRange(startDate, endDate);
+      sendJson(res, 200, data);
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: err.message || '시트 내보내기에 실패했습니다.' });
     }
     return;
   }
