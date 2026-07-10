@@ -15,6 +15,7 @@ const {
 const PORT = process.env.PORT || 3000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const SYNC_DELAY_MS = Number(process.env.SYNC_DELAY_MS || 45000);
+const KEEP_ALIVE_MS = Number(process.env.KEEP_ALIVE_MS || 4 * 60 * 1000);
 const SYNC_SECRET = process.env.SYNC_SECRET || '';
 const AES_KEY = Buffer.from('0b659773-ee62-41f6-9162-5f4217488e2c').subarray(0, 16);
 const HSMOA_BASE = 'https://trend.hsmoa-ad.com';
@@ -340,6 +341,52 @@ let syncState = {
   error: null,
 };
 
+let keepAliveTimer = null;
+
+function getKeepAliveUrl() {
+  const base = (
+    process.env.KEEP_ALIVE_URL ||
+    process.env.RENDER_EXTERNAL_URL ||
+    `http://127.0.0.1:${PORT}`
+  ).replace(/\/$/, '');
+  return `${base}/api/health`;
+}
+
+function pingKeepAlive() {
+  const target = getKeepAliveUrl();
+  try {
+    const url = new URL(target);
+    const client = url.protocol === 'https:' ? https : http;
+    const req = client.get(url, { timeout: 10000 }, (res) => {
+      res.resume();
+      console.log(`keep-alive ping ${url.href} -> ${res.statusCode}`);
+    });
+    req.on('error', (err) => {
+      console.error('keep-alive ping failed', err.message);
+    });
+    req.on('timeout', () => {
+      req.destroy();
+    });
+  } catch (err) {
+    console.error('keep-alive ping error', err.message);
+  }
+}
+
+function startKeepAlive() {
+  stopKeepAlive();
+  pingKeepAlive();
+  keepAliveTimer = setInterval(pingKeepAlive, KEEP_ALIVE_MS);
+  console.log(`keep-alive started every ${KEEP_ALIVE_MS}ms -> ${getKeepAliveUrl()}`);
+}
+
+function stopKeepAlive() {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+    console.log('keep-alive stopped');
+  }
+}
+
 async function runSlowSheetSync({ daysAhead = 7, onlyToday = false } = {}) {
   if (!isSheetsConfigured()) {
     throw new Error('구글 시트 환경 변수가 설정되지 않았습니다.');
@@ -357,6 +404,8 @@ async function runSlowSheetSync({ daysAhead = 7, onlyToday = false } = {}) {
     results: [],
     error: null,
   };
+
+  startKeepAlive();
 
   (async () => {
     try {
@@ -384,6 +433,7 @@ async function runSlowSheetSync({ daysAhead = 7, onlyToday = false } = {}) {
       console.error('sheet sync failed', err);
       syncState.error = err.message;
     } finally {
+      stopKeepAlive();
       syncState.running = false;
       syncState.currentDate = null;
       syncState.finishedAt = new Date().toISOString();
@@ -394,6 +444,7 @@ async function runSlowSheetSync({ daysAhead = 7, onlyToday = false } = {}) {
     started: true,
     dates,
     delayMs: SYNC_DELAY_MS,
+    keepAliveMs: KEEP_ALIVE_MS,
   };
 }
 
