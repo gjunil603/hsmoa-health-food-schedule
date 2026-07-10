@@ -233,12 +233,21 @@ h1 {
 
 .filters {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   padding: 0 16px 8px;
 }
 
+.export-bar {
+  padding: 0 16px 8px;
+}
+
+.export-bar.hidden {
+  display: none;
+}
+
 .download-btn {
+  width: 100%;
   white-space: nowrap;
 }
 

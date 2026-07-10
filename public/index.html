@@ -59,7 +59,10 @@
       <option value="">전체 채널</option>
     </select>
     <button id="liveOnly" type="button" class="pill-btn" aria-pressed="false">LIVE</button>
-    <button id="downloadExcelBtn" type="button" class="text-btn download-btn">엑셀</button>
+  </section>
+
+  <section id="exportBar" class="export-bar hidden">
+    <button id="downloadExcelBtn" type="button" class="text-btn download-btn">엑셀 다운로드</button>
   </section>
 
   <p id="statusText" class="status">불러오는 중...</p>
@@ -80,7 +83,7 @@
     </a>
   </template>
 
-  <script src="/app.js?v=7"></script>
+  <script src="/app.js?v=8"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
