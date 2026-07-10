@@ -11,7 +11,6 @@ const statusText = document.getElementById('statusText');
 const scheduleList = document.getElementById('scheduleList');
 const totalCount = document.getElementById('totalCount');
 const filters = document.getElementById('filters');
-const exportBar = document.getElementById('exportBar');
 const liveOnly = document.getElementById('liveOnly');
 const channelSelect = document.getElementById('channelSelect');
 const downloadExcelBtn = document.getElementById('downloadExcelBtn');
@@ -523,7 +522,6 @@ async function loadSchedule(forceRefresh = false) {
     totalCount.textContent = data.total;
     totalCount.classList.remove('hidden');
     filters.classList.remove('hidden');
-    if (exportBar) exportBar.classList.remove('hidden');
 
     populateChannelSelect();
     renderSchedules();
@@ -542,7 +540,6 @@ async function loadSchedule(forceRefresh = false) {
     totalCount.textContent = '0';
     totalCount.classList.add('hidden');
     filters.classList.add('hidden');
-    if (exportBar) exportBar.classList.add('hidden');
     channelSelect.innerHTML = '<option value="">전체 채널</option>';
     statusText.textContent = '불러오기 실패';
     scheduleList.innerHTML = `<p class="error">${err.message}</p>`;

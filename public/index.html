@@ -59,10 +59,11 @@
       <option value="">전체 채널</option>
     </select>
     <button id="liveOnly" type="button" class="pill-btn" aria-pressed="false">LIVE</button>
-  </section>
-
-  <section id="exportBar" class="export-bar hidden">
-    <button id="downloadExcelBtn" type="button" class="text-btn download-btn">엑셀 다운로드</button>
+    <button id="downloadExcelBtn" type="button" class="icon-btn download-icon-btn" aria-label="엑셀 다운로드" title="엑셀 다운로드">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1 7V3.5L19.5 9H15zM8.2 18l2.1-3.2L8.3 12h1.7l1.2 1.9 1.2-1.9h1.6l-2 3 2.1 3H12.4l-1.3-2-1.3 2H8.2z"/>
+      </svg>
+    </button>
   </section>
 
   <p id="statusText" class="status">불러오는 중...</p>
@@ -95,7 +96,7 @@
     </a>
   </template>
 
-  <script src="/app.js?v=13"></script>
+  <script src="/app.js?v=14"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');

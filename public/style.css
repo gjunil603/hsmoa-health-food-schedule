@@ -233,22 +233,26 @@ h1 {
 
 .filters {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 8px;
   padding: 0 16px 8px;
+  align-items: center;
 }
 
-.export-bar {
-  padding: 0 16px 8px;
-}
-
-.export-bar.hidden {
+.filters.hidden {
   display: none;
 }
 
-.download-btn {
-  width: 100%;
-  white-space: nowrap;
+.download-icon-btn {
+  color: #217346;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.download-icon-btn svg {
+  display: block;
 }
 
 .modal-overlay {
