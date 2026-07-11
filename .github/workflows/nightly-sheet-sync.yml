@@ -1,0 +1,47 @@
+name: Nightly sheet sync
+
+on:
+  schedule:
+    # 한국시간 매일 00:00 = UTC 15:00
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  wake-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake Render server
+        run: |
+          set -e
+          URL="https://hsmoa-health-food-schedule.onrender.com/api/wake"
+          echo "Waking $URL"
+          for i in 1 2 3 4 5 6 7 8; do
+            if curl -fsS --max-time 120 "$URL"; then
+              echo ""
+              echo "Server is awake (attempt $i)"
+              exit 0
+            fi
+            echo "Wake attempt $i failed, retry in 20s..."
+            sleep 20
+          done
+          echo "Failed to wake server"
+          exit 1
+
+      - name: Wait for server to stabilize
+        run: sleep 15
+
+      - name: Start sheet sync
+        env:
+          SYNC_SECRET: ${{ secrets.SYNC_SECRET }}
+        run: |
+          set -e
+          BASE="https://hsmoa-health-food-schedule.onrender.com"
+          if [ -n "$SYNC_SECRET" ]; then
+            URL="$BASE/api/sheets/sync?days=7&secret=${SYNC_SECRET}&quiet=1"
+          else
+            URL="$BASE/api/sheets/sync?days=7&quiet=1"
+          fi
+          echo "Starting sync..."
+          curl -fsS --max-time 60 "$URL"
+          echo ""
+          echo "Sync started"

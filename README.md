@@ -51,51 +51,38 @@ node server.js
 
 ### 매일 자동 동기화 (새벽, Render 무료)
 
-Render 무료는 가만히 있으면 잠듭니다. **외부 크론**이 새벽에 URL을 한 번 호출하면 서버가 깨어나 오늘~7일 시트를 천천히 채웁니다.
+Render 무료는 가만히 있으면 잠듭니다. 깨우는 데 **30~60초 이상** 걸릴 수 있습니다.
 
-#### 1) (권장) 비밀값 추가
+**cron-job.org는 약 30초 안에 응답이 없으면 실패**합니다. 슬립 상태에서 TEST RUN을 누르면 `Failed (output too large)`가 나고, 실제로는 서버가 안 깨어난 것처럼 보일 수 있습니다. (브라우저로 사이트를 열면 그때야 깨기 시작하는 이유입니다.)
 
-Render → Environment에 추가:
+#### 권장: GitHub Actions (긴 대기 가능)
+
+저장소에 `.github/workflows/nightly-sheet-sync.yml` 이 있습니다.
+
+1. GitHub 저장소 → **Settings → Secrets and variables → Actions**
+2. Secret 추가: `SYNC_SECRET` = Render에 넣은 값과 동일
+3. **Actions** 탭 → **Nightly sheet sync** → **Run workflow** 로 수동 테스트
+4. 매일 **한국시간 00:00**에 자동 실행 (깨우기 재시도 최대 ~3분 → 동기화 시작)
+
+cron-job.org wake/sync 작업은 꺼 두셔도 됩니다.
+
+#### (선택) Render 비밀값
 
 | Key | Value |
 |-----|--------|
-| `SYNC_SECRET` | 아무 긴 비밀번호 (예: `my-secret-2026`) |
+| `SYNC_SECRET` | 아무 긴 비밀번호 (예: `hsmoa2026secret`) |
 
-#### 2) cron-job.org 설정
-
-1. [cron-job.org](https://cron-job.org) 가입 (무료)
-2. **Create cronjob**
-3. 설정 예:
-
-| 항목 | 값 |
-|------|-----|
-| Title | `hsmoa sheet sync` |
-| URL | `https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?days=7&secret=여기에_SYNC_SECRET&quiet=1` |
-| Schedule | Every day |
-| 시각 | **19:00 UTC** = 한국시간 **새벽 4:00** |
-| Request method | GET |
-
-`SYNC_SECRET`을 안 넣었다면 URL에서 `&secret=...` 부분을 빼면 됩니다.
-
-#### 3) 소요 시간
+#### 소요 시간
 
 - 날짜마다 약 45초 대기 + API 조회
-- 오늘~7일(8일)이면 **대략 15~30분** 걸릴 수 있음
-- 첫 호출은 서버 깨우는 시간(30초~1분)이 더 붙을 수 있음
-- 동기화 중에는 서버가 **약 2분마다 자기 `/api/health`를 호출**해 Render 무료 슬립을 막습니다
-- cron URL에는 `&quiet=1` 을 붙이세요 (cron-job.org 응답 크기 제한 대응)
+- 오늘~7일(8일)이면 **대략 15~30분**
+- 동기화 중에는 서버가 **약 2분마다** `/api/health`를 호출해 슬립을 막습니다
 
-#### 4) 확인
+#### 확인
 
 - 다음날 아침 구글 시트 `schedules`에 여러 날짜가 있는지 확인
-- cron-job.org 실행 기록이 성공(2xx)인지 확인
+- GitHub Actions 실행이 초록(성공)인지 확인
 - 앱에서 날짜를 바꿔 볼 때 상태 줄에 **시트**가 보이면 OK
-
-오늘만 매일 갱신하려면:
-
-```
-https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?today=1&secret=여기에_SYNC_SECRET
-```
 
 ## 배포 (Render)
 
@@ -133,6 +120,7 @@ git push
 | `GET /api/schedule?date=YYYY-MM-DD` | 편성표 (시트 우선, 없으면 API) |
 | `GET /api/schedule?date=...&refresh=1` | API 최신 조회 후 시트 갱신 |
 | `GET /api/sheets/export?days=7` | 시트에서 오늘~N일 편성표 JSON |
+| `GET /api/wake` | 깨우기용 (응답 `ok` 2바이트) |
 | `GET /api/sheets/sync?today=1` | 오늘만 천천히 동기화 시작 |
 | `GET /api/sheets/sync?days=7` | 오늘~N일 동기화 시작 |
 | `GET /api/health` | 서버 상태 확인 |
