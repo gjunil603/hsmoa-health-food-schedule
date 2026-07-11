@@ -70,7 +70,7 @@ Render → Environment에 추가:
 | 항목 | 값 |
 |------|-----|
 | Title | `hsmoa sheet sync` |
-| URL | `https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?days=7&secret=여기에_SYNC_SECRET` |
+| URL | `https://hsmoa-health-food-schedule.onrender.com/api/sheets/sync?days=7&secret=여기에_SYNC_SECRET&quiet=1` |
 | Schedule | Every day |
 | 시각 | **19:00 UTC** = 한국시간 **새벽 4:00** |
 | Request method | GET |
@@ -82,7 +82,8 @@ Render → Environment에 추가:
 - 날짜마다 약 45초 대기 + API 조회
 - 오늘~7일(8일)이면 **대략 15~30분** 걸릴 수 있음
 - 첫 호출은 서버 깨우는 시간(30초~1분)이 더 붙을 수 있음
-- 동기화 중에는 서버가 **약 4분마다 자기 `/api/health`를 호출**해 Render 무료 슬립을 막습니다
+- 동기화 중에는 서버가 **약 2분마다 자기 `/api/health`를 호출**해 Render 무료 슬립을 막습니다
+- cron URL에는 `&quiet=1` 을 붙이세요 (cron-job.org 응답 크기 제한 대응)
 
 #### 4) 확인
 

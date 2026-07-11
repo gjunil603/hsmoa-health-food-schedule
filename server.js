@@ -16,7 +16,7 @@ const {
 const PORT = process.env.PORT || 3000;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 const SYNC_DELAY_MS = Number(process.env.SYNC_DELAY_MS || 45000);
-const KEEP_ALIVE_MS = Number(process.env.KEEP_ALIVE_MS || 4 * 60 * 1000);
+const KEEP_ALIVE_MS = Number(process.env.KEEP_ALIVE_MS || 2 * 60 * 1000);
 const SYNC_SECRET = process.env.SYNC_SECRET || '';
 const AES_KEY = Buffer.from('0b659773-ee62-41f6-9162-5f4217488e2c').subarray(0, 16);
 const HSMOA_BASE = 'https://trend.hsmoa-ad.com';
@@ -636,18 +636,44 @@ const server = http.createServer(async (req, res) => {
       }
 
       const onlyToday = url.searchParams.get('today') === '1';
+      const quiet = url.searchParams.get('quiet') === '1' || url.searchParams.get('cron') === '1';
       const daysAhead = Number(url.searchParams.get('days') || 7);
       const result = await runSlowSheetSync({
         daysAhead: Number.isFinite(daysAhead) ? Math.min(Math.max(daysAhead, 0), 7) : 7,
         onlyToday,
       });
+
+      // cron-job.org는 응답 크기 제한이 있어 크론용은 아주 짧게 응답
+      if (quiet) {
+        const body = 'ok';
+        res.writeHead(202, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Length': Buffer.byteLength(body),
+          'Cache-Control': 'no-store',
+        });
+        res.end(body);
+        return;
+      }
+
       sendJson(res, 202, {
         message: onlyToday
           ? '오늘 편성표 시트 동기화를 시작했습니다.'
           : `오늘부터 ${result.dates.length - 1}일 후까지 시트 동기화를 시작했습니다.`,
-        ...result,
+        started: true,
+        dateCount: result.dates.length,
+        delayMs: result.delayMs,
       });
     } catch (err) {
+      if (url.searchParams.get('quiet') === '1' || url.searchParams.get('cron') === '1') {
+        const body = `err:${err.message}`.slice(0, 80);
+        res.writeHead(409, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Length': Buffer.byteLength(body),
+          'Cache-Control': 'no-store',
+        });
+        res.end(body);
+        return;
+      }
       sendJson(res, 409, { error: err.message });
     }
     return;
